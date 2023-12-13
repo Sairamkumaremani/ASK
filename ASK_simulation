@@ -1,0 +1,74 @@
+clear all;
+close all;
+
+% Parameters
+samples = 1e3;
+amplitude = 3;       % Amplitude of the carrier signal
+fc = 433e6;             % Carrier frequency
+B = 1000;               % Bandwidth of the channel
+numBits = 10;        % Number of bits in the message
+message = zeros(1,samples);
+bit=1;
+%Generate random sequence
+for i=1:length(message)
+    if mod(i,samples/numBits)==0
+        if rand<0.5
+            bit = ~bit;
+        end
+    end
+    message(i)=bit;
+end
+ t = linspace(0,1,samples);
+
+carrierWave = amplitude * sin(2 * pi * fc * t);
+
+ask_signal = message.*carrierWave;
+
+
+%Define AWGN Channel parameters
+noise_power = 1;
+%Addding AWGN to the signal
+received_signal =ask_signal+sqrt(noise_power/2)*(randn(1, samples));
+%Demodulation
+demodulatedSignal = received_signal .* carrierWave;
+% Apply envelope detection (rectification)
+demodulatedSignal = abs(demodulatedSignal);
+% Threshold for demodulation
+threshold = amplitude;
+demodulatedSignalBinary = demodulatedSignal >= threshold;
+% Calculate Bit Error Rate (BER)
+errorBits = sum(message ~= demodulatedSignalBinary);
+ber = errorBits / samples;
+
+% Calculate signal power
+signal_power = mean(abs(ask_signal).^2);
+%Calculation of SNR
+snr_db = 10 * log10(signal_power / noise_power);
+channel_capacity = B * log2(1 + snr_db);
+
+% Display results
+disp(['BER:', num2str(ber)]);
+disp(['SNR (dB):', num2str(snr_db)]);
+disp(['Channel Capacity (bits/s):', num2str(channel_capacity)]);
+
+% Plot signals
+subplot(2,2,1)
+stem(message);
+title('Message Signal');
+xlabel('Samples');
+ylabel('Value');
+subplot(2,2,3);
+plot(t, ask_signal);
+title('Modulated ASK Signal');
+xlabel('Time');
+ylabel('Amplitude');
+subplot(2,2,4);
+plot(t, received_signal);
+title('Received Signal with AWGN');
+xlabel('Time');
+ylabel('Amplitude');
+subplot(2,2,2);
+stem(demodulatedSignalBinary);
+title('Demodulated Data');
+xlabel('Samples');
+ylabel('Value');
